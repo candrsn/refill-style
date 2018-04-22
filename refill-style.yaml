@@ -268,6 +268,15 @@ sources:
             api_key: global.sdk_api_key
         tile_size: 512
         max_zoom: 14
+    naip-source:
+        type: Raster
+        url: https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/WMTS/tile/1.0.0/USGSImageryOnly/default/GoogleMapsCompatible/{z}/{x}/{y}
+        max_zoom: 16
+    naip-wms-source:
+        type: Raster
+        url: http://localhost:8080/wmts/naip/webmercator/{z}/{x}/{y}.png
+        min_zoom: 13
+        max_zoom: 18
 
     # # Only enable this for local debug, should not be enabled for prod (app inserts these at runtime)
     # # These are all in San Francisco, California
@@ -329,6 +338,26 @@ cameras:
         type: isometric
 
 styles:
+    _transparent:
+        base: polygons
+        blend: overlay
+
+    _translucent:
+        base: polygons
+        blend: overlay
+
+    _translucent_lines:
+        base: lines
+        blend: overlay
+
+#layers:
+#    buildings:
+#        data: { source: mapzen }
+#        draw:
+#            _transparent:
+#                order: 1
+#                color: [.7, .7, .7, .5]
+#                extrude: true
 
 ##### LIBRARY OF FUNCTIONS
 #    SPACE functions
@@ -640,7 +669,7 @@ styles:
     riverlines:
         base: lines
         mix: [space-constant]
-        blend: opaque
+        blend: overlay
         shaders:
             uniforms:
                 u_tint: global.light_color
@@ -842,8 +871,8 @@ styles:
         blend_order: 0
 
 scene:
-    background:
-        color: global.white_color
+        #    background:
+        #color: global.white_color
 
 fonts:
     Open Sans:
@@ -874,6 +903,12 @@ fonts:
 
 
 layers:
+    naip:
+        data: { source: naip-wms-source }
+        draw:
+            raster:
+                order: 1
+
     # Map overlays for styling the server response (using special source layer names) for route line, current location, and search result pins
     mz_route_line:
         data: { source: mz_route_line }
@@ -1148,10 +1183,10 @@ layers:
         data: { source: mapzen, layer: water }
         draw:
             polygons:
-                style: waves
-                visible: false
-                order: global.feature_order
-                color: [[0, global.lightest_color], [12, global.lighter_color]]
+                style: _translucent
+                visible: true
+                order: 1
+                color: [[0, [0.164,0.368,0.98,0.5]], [12, [0.164,0.368,0.98,0.1]]]
 
         lakes:
             filter:
@@ -1177,17 +1212,19 @@ layers:
                     - { $zoom: { min: 15 } }
             draw:
                 polygons:
-                    style: waves
+                    style: _translucent
                     visible: true
-                    color: global.lighter_color
+                    color: [[0, [0.164,0.368,0.98,0.5]], [12, [0.164,0.368,0.98,0.35]]]
+
 
         other-water-areas:
             filter: { not: { kind: [ocean, lake, water, reservoir] }, $zoom: { min: 11 }, area: { min: 100 } }
             draw:
                 polygons:
-                    style: waves
+                    style: translucent
                     visible: true
-                    color: global.lighter_color
+                    color: [[0, [0.164,0.368,0.98,0.5]], [12, [0.164,0.368,0.98,0.35]]]
+
         playas:
             filter: { kind: playa }
             draw:
@@ -1268,10 +1305,10 @@ layers:
             filter: { kind: [river,canal,stream,dam,ditch,drain], $zoom: { min: 11 }, not: { is_tunnel: true } }
             draw:
                 lines:
-                    style: riverlines
+                    style: _translucent_lines
                     visible: true
                     order: global.feature_order_down_1
-                    color: global.extralight_color
+                    color: [0.11,0.22,0.85,0.20]
                     width: [[11, 0.5px], [14, 2px], [ 18, 8px]]
                     cap: round
             intermittent:
@@ -1681,7 +1718,7 @@ layers:
     roads:
         data: { source: mapzen, layer: roads }
         draw:
-            lines:
+            _translucent_lines:
                 width: 1px
                 order: global.feature_order
                 # but give them all the same outline
@@ -1772,7 +1809,7 @@ layers:
         highway:
             filter: { kind: highway, $zoom: { min: 8 } }
             draw:
-                lines:
+                _translucent_lines:
                     color: [[8, global.black_color], [13, global.black_color], [14, global.white_color]]
                     width: [[8, 1px], [13, 1.25px], [14, 0.1px], [15, 1.5px], [17, 8px], [18, 10m]]
                     outline:
@@ -1842,7 +1879,7 @@ layers:
             filter: { kind: major_road, $zoom: { min: 8 } }
             # default style
             draw:
-                lines:
+                _translucent_lines:
                     color: [[8, global.black_color], [13, global.black_color], [17, global.white_color]]
                     width: [[13, 1px], [14, 1px], [16, 2.5px], [17, 3px]]
                     outline:
@@ -3106,7 +3143,7 @@ layers:
                         width: [[14,0px],[15,0.5px],[18,2px]]
 
     buildings:
-        data: { source: mapzen, layer: buildings }
+        data: { source: mapzen, layer: buildingss }
         filter:
             not: { location: underground }
        # set default footprint and extrusion draw properties, but don't draw by default (rules below will turn visibility on)
@@ -4461,6 +4498,8 @@ layers:
             filter:
                 - kind: [national_park, battlefield, park, protected_area, forest, beach]
             draw:
+                _transparent:
+                    color: [0.5,0.825,0.5,0.5]
                 mapzen_icon_library:
                     visible: global.icon_visible_landuse_green
                     size: global.icon_size_green
@@ -4919,8 +4958,8 @@ layers:
                     - protect_class: ['2','3','5']
             draw:
                 polygons:
-                    style: dots
-                    color: global.lighter_color
+                    style: _translucent
+                    color: [0.0, 0.80, 0.15, 0.15]
                     order: 18
                     visible: true
             us_national_park:
@@ -4931,7 +4970,7 @@ layers:
                         - protect_class: ['2','3','5']
                 draw:
                     polygons:
-                        style: pixel-pattern-light
+                        style: _translucent
                         visible: true
 
         # tier2:
@@ -4943,8 +4982,8 @@ layers:
                 not: { protect_class: ['2','3','5']}
             draw:
                 polygons:
-                    style: pixel-pattern-light
-                    color: global.white_color
+                    style: _translucent
+                    color: [0.05,0.98,0.25,0.15]
                     visible: true
 
         national_forest_level_6:
@@ -4958,14 +4997,14 @@ layers:
                 polygons:
                     style: pixel-pattern-bright
                     color: global.lighter_color
-                    visible: true
+                    visible: false
 
         forest-landcover:
             filter: { kind: [forest, natural_forest, wood, natural_wood, natural_park], $zoom: { min: 10 }, not: { operator: "United States Forest Service" } }
             draw:
                 polygons:
                     style: pixel-pattern-light
-                    visible: true
+                    visible: false
 
         parks-and-national-forests-not-national-park:
             filter:
@@ -4978,8 +5017,8 @@ layers:
             # default for national forests and more?
             draw:
                 polygons:
-                    style: dots
-                    color: global.lighter_color
+                    style: _translucent
+                    color: [0.164,0.90,0.368,0.20]
                     visible: true
             national_park:
                 #filter: function() { return feature.name && (feature.name.indexOf('National Park') > -1); }
@@ -4989,7 +5028,7 @@ layers:
                         - not: [ protect_class: ['2','3','5','6'], operator: [ "United States National Park Service"] ]
                 draw:
                     polygons:
-                        style: pixel-pattern-light
+                        style: _translucent
                         visible: true
 
         # gotta be a protected area to draw green, not just a landcover type
@@ -5001,7 +5040,7 @@ layers:
                 polygons:
                     style: tiny-dots
                     color: global.offwhite_color
-                    visible: true
+                    visible: false
 
         #tier3:
         university:
@@ -5011,15 +5050,15 @@ layers:
                 polygons:
                     style: dots-rev
                     color: global.lightest_color
-                    visible: true
+                    visible: false
         #tier4:
         cemetery:
             filter:
                 kind: cemetery
             draw:
                 polygons:
-                    style: tiny-dots
-                    color: global.lighter_color
+                    style: _translucent
+                    color: [0.14,0.85,0.35, 0.15]
                     visible: true
 
         golf_course:
@@ -5027,8 +5066,8 @@ layers:
                 kind: golf_course
             draw:
                 polygons:
-                    style: medium-dots
-                    color: global.lightest_color
+                    style: _translucent
+                    color: [0.14,0.85,0.35, 0.10]
                     visible: true
 
         hospital:
@@ -5038,7 +5077,7 @@ layers:
                 polygons:
                     style: medium-dots
                     color: global.lightest_color
-                    visible: true
+                    visible: false
 
         sports_centre:
             filter:
@@ -5047,6 +5086,7 @@ layers:
                 polygons:
                     style: dots-rev-grid
                     color: global.offwhite_color
+                    visible: false
 
         recreation_ground:
             filter:
@@ -5055,7 +5095,7 @@ layers:
                 polygons:
                     style: dots-rev-grid
                     color: global.offwhite_color
-                    visible: true
+                    visible: false
         stadium:
             filter:
                 kind: stadium
@@ -5063,7 +5103,7 @@ layers:
                 polygons:
                     style: dots-rev-grid
                     color: global.offwhite_color
-                    visible: true
+                    visible: false
         zoo:
             filter:
                 kind: [zoo, wildlife_park]
@@ -5071,7 +5111,7 @@ layers:
                 polygons:
                     style: tiny-dots
                     color: global.offwhite_color
-                    visible: true
+                    visible: false
 
         winter_sports:
             filter:
@@ -5116,7 +5156,7 @@ layers:
                     polygons:
                         style: dots
                         color: global.light_color
-                        visible: true
+                        visible: false
             beach:
                 filter:
                     kind: beach
@@ -5124,7 +5164,7 @@ layers:
                     polygons:
                         style: dots
                         color: global.lightest_color
-                        visible: true
+                        visible: false
         #tier6:
         garden:
             filter:
@@ -5133,7 +5173,7 @@ layers:
                 polygons:
                     style: tiny-dots
                     color: global.light_color
-                    visible: true
+                    visible: false
 
         parking:
             filter:
@@ -5156,7 +5196,7 @@ layers:
                 polygons:
                     style: dots
                     color: global.offwhite_color
-                    visible: true
+                    visible: false
             green-stuff:
                 filter:
                     surface: [grass]
@@ -5164,12 +5204,13 @@ layers:
                     polygons:
                         style: dots
                         color: global.lighter_color
+                        visible: false
         pitch:
             filter: { kind: pitch }
             draw:
                 polygons:
-                    style: tiny-dots
-                    color: global.lightest_color
+                    style: _translucent
+                    color: [0.164,0.825,0.164,0.25]
                     visible: true
                 outline:
                     style: lines
@@ -5184,7 +5225,7 @@ layers:
                 polygons:
                     style: dots-rev
                     color: global.ultralight_color
-                    visible: true
+                    visible: false
 
         school:
             filter:
@@ -5193,7 +5234,7 @@ layers:
                 polygons:
                     style: dots-rev
                     color: global.offwhite_color
-                    visible: true
+                    visible: false
 
         minor-landuse:
             filter:
@@ -5206,7 +5247,7 @@ layers:
                 polygons:
                     style: dots
                     color: global.light_color
-                    visible: true
+                    visible: false
 
         landuse-not-filtered:
             # runways and taxiways are also in the roads layer as lines
@@ -5262,7 +5303,7 @@ layers:
                     polygons:
                         style: dots
                         color: global.light_color
-                        visible: true
+                        visible: false
 
             minor-zoo-landuse:
                 filter:
@@ -5275,7 +5316,7 @@ layers:
                     polygons:
                         style: dots
                         color: global.lighter_color
-                        visible: true
+                        visible: false
 
         # city_walls:
         #     filter: { kind: city_wall }
